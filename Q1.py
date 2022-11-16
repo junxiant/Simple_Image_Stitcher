@@ -49,7 +49,6 @@ def get_coord(img_path):
             
             # Count 
             for (x, y, r) in circles:
-                # Draw NEW circles over old circles > Increase the size so it can be easily detected
                 # cv2.circle(mask, (x, y), 5, (255, 0, 255), -1)
                 index = index + 1
                 
