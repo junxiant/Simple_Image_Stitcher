@@ -9,3 +9,5 @@ example
 ```
 python Q1.py --input_folder ./fumo
 ```
+
+You can view the final images in this repo too.
