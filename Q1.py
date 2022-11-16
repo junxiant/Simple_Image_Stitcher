@@ -1,5 +1,6 @@
 import glob
 import argparse
+import pathlib
 
 import numpy
 from matplotlib import pyplot as plt
@@ -7,8 +8,8 @@ import cv2
 
 def get_coord(img_path):
     '''Function to get coordinates (rows,cols) based on color for each image.
-        Use opencv's range for color thresholding, followed by dilation to increase
-        the size of the circles.
+        Median blur to remove noise.
+        Use opencv's range for color thresholding, followed by dilation.
         Then use hough circles to detect the circles in the mask image.
         
         Inputs:
@@ -35,12 +36,12 @@ def get_coord(img_path):
         mask = cv2.inRange(blur,lower,upper) 
         
         # Dilalte to increase circle
-        kernel = (3,3)
-        mask = cv2.dilate(mask,kernel,iterations=2)
+        kernel = (7,7)
+        mask = cv2.dilate(mask,kernel,iterations=1)
 
         # Use hough circles to detect circles, adjust params accordingly
-        circles = cv2.HoughCircles(mask,cv2.HOUGH_GRADIENT,1,8,param1=20,param2=7,
-                                minRadius=0,maxRadius=50)    
+        circles = cv2.HoughCircles(mask,cv2.HOUGH_GRADIENT,1,5,param1=20,param2=7,
+                                minRadius=0,maxRadius=25)    
         
         # If there are circles, find how many circles for each color
         if circles is not None:
@@ -48,6 +49,8 @@ def get_coord(img_path):
             
             # Count 
             for (x, y, r) in circles:
+                # Draw NEW circles over old circles > Increase the size so it can be easily detected
+                # cv2.circle(mask, (x, y), 5, (255, 0, 255), -1)
                 index = index + 1
                 
         # print(f"For {col[i]}")
@@ -75,20 +78,26 @@ def plot_grid(sorted_coords):
     '''
     rows = cols = sorted_coords[-1][1][0]
 
-    fig = plt.figure(figsize=(8, 8))
-
-    for i in range(1, cols*rows + 1):
+    fig = plt.figure(figsize=(12, 12))
+    
+    # upper_b = (cols*rows) + 1
+    
+    for i in range(1, len(sorted_coords)+1):
         # Because the x,y started at 1, it needs to do i-1.
         img = cv2.imread(sorted_coords[i-1][0])
         fig.add_subplot(rows, cols, i)
-        
+        print(f"Plotting {i} out of {len(sorted_coords)}")
+
         plt.axis('off')
-        plt.tight_layout()
         plt.imshow(img)
+    
+    # Get folder name
+    p = pathlib.Path(sorted_coords[0][0])
+    p = p.parts[0]
     
     # Uncomment this line below to see the grids
     plt.subplots_adjust(wspace=0,hspace=0)
-    plt.savefig("Final_Img.jpg",bbox_inches='tight',pad_inches=0)
+    plt.savefig(f"{p}_final_img.jpg",pad_inches=0)
     plt.show()
     
 
@@ -102,6 +111,7 @@ if __name__ == '__main__':
     # Get list of images first
     img_list = glob.glob(f"{input_folder}/*")
 
+    print("Number of images: ", len(img_list))
     # Create dict
     full_coords = dict()
     
