@@ -2,7 +2,7 @@ import glob
 import argparse
 import pathlib
 
-import numpy
+import numpy as np
 from matplotlib import pyplot as plt
 import cv2
 
@@ -10,7 +10,7 @@ def get_coord(img_path):
     '''Function to get coordinates (rows,cols) based on color for each image.
         Median blur to remove noise.
         Use opencv's range for color thresholding, followed by dilation.
-        Then use hough circles to detect the circles in the mask image.
+        Then use blob detector.
         
         Inputs:
         img_path: The path to the individual image.    
@@ -29,8 +29,21 @@ def get_coord(img_path):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     blur = cv2.medianBlur(img, 3)
 
+    # Blob
+    params = cv2.SimpleBlobDetector_Params()
+    params.filterByArea = True
+    params.minArea = 1
+    params.filterByCircularity = False
+    params.filterByColor = False
+    params.filterByInertia = False
+    params.filterByConvexity = False
+    params.minDistBetweenBlobs = 0
+
+    detector = cv2.SimpleBlobDetector_create(params)
+
     for lower, upper in dot_colors:
-        index = 0
+        # output = img.copy()
+        # index = 0
 
         # Threshold these colors
         mask = cv2.inRange(blur,lower,upper) 
@@ -39,25 +52,27 @@ def get_coord(img_path):
         kernel = (7,7)
         mask = cv2.dilate(mask,kernel,iterations=1)
 
-        # Use hough circles to detect circles, adjust params accordingly
-        circles = cv2.HoughCircles(mask,cv2.HOUGH_GRADIENT,1,5,param1=20,param2=7,
-                                minRadius=0,maxRadius=25)    
-        
-        # If there are circles, find how many circles for each color
-        if circles is not None:
-            circles = numpy.round(circles[0, :]).astype("int")
-            
-            # Count 
-            for (x, y, r) in circles:
-                # cv2.circle(mask, (x, y), 5, (255, 0, 255), -1)
-                index = index + 1
+        # Blob detection        
+        kp = detector.detect(mask)
+        mask = cv2.drawKeypoints(mask, kp, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+        # circles = cv2.HoughCircles(mask,cv2.HOUGH_GRADIENT,1,5,param1=20,param2=8,
+        #                         minRadius=0,maxRadius=25)    
+
+        # if circles is not None:
+        #     # convert the (x, y) coordinates and radius of the circles to integers
+        #     circles = numpy.round(circles[0, :]).astype("int")
+        #     # loop over to count
+        #     for (x, y, r) in circles:
+        #         cv2.circle(mask, (x, y), 7, (255, 0, 255), -1)
+        #         index = index + 1
                 
         # print(f"For {col[i]}")
         # print(f"No. of circles detected:", index)
+        # print(f"No. of blobs: ", len(kp))
         i = i + 1
-        col_arr.append(index)
+        col_arr.append(len(kp))
         
-        # To display the mask
         # plt.imshow(mask)
         # plt.show()
     
